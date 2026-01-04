@@ -1,0 +1,14 @@
+streamlit==1.29.0
+pandas==2.0.3
+numpy==1.24.4
+plotly==5.18.0
+pillow==10.1.0
+opencv-python-headless==4.8.1.78
+
+# YOLOv8 backend
+ultralytics==8.1.0
+torch
+torchvision
+tqdm
+pyyaml
+
