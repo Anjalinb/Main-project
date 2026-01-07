@@ -74,7 +74,7 @@ st.markdown("""
         <h2>Project Objective</h2>
         <p style='font-size: 1.2rem; line-height: 1.8; margin-top: 1rem;'>
             To develop an intelligent, AI-powered system that automatically detects and classifies defects
-            in photovoltaic modules using deep learning–based computer vision techniques with an optimized
+            in photovoltaic modules using an optimized
             YOLOv8 model. The system aims to improve solar panel quality assurance, reduce inspection time,
             and enhance the overall efficiency of solar energy infrastructure maintenance.
         </p>
@@ -92,7 +92,6 @@ with col1:
                 <span class="tech-badge">YOLOv8</span>
                 <span class="tech-badge">Python</span>
                 <span class="tech-badge">Streamlit</span>
-                <span class="tech-badge">Deep Learning</span>
                 <span class="tech-badge">Plotly</span>
             </div>
         </div>
@@ -137,20 +136,19 @@ st.markdown("""
 
 st.markdown("""
     <div class="content-section">
-        <h3> Detectable Defect Types</h3>
+        <h3>Detectable Defect Types</h3>
         <div style='display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;'>
             <div>
                 <h4 style='color: #667eea;'>Physical Defects</h4>
                 <ul>
-                    <li><strong>Cracks</strong></li>
-                    <li><strong>Scratches</strong></li>
-                    <li><strong>Broken Grids</strong></li>
+                    <li><strong>Physical damage</strong></li>
+                    <li><strong>Electrical damage</strong></li>
                 </ul>
             </div>
             <div>
                 <h4 style='color: #667eea;'>Performance Defects</h4>
                 <ul>
-                    <li><strong>Hotspots</strong></li>
+                    <li><strong>Snow</strong></li>
                     <li><strong>Dust</strong></li>
                     <li><strong>Bird Droppings</strong></li>
                 </ul>
@@ -158,6 +156,7 @@ st.markdown("""
         </div>
     </div>
 """, unsafe_allow_html=True)
+
 
 st.markdown("---")
 
