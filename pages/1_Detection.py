@@ -130,12 +130,7 @@ with col1:
             help="Minimum confidence level for defect detection"
         )
 
-        defect_types = st.multiselect(
-            "Defect Types to Detect",
-            ["Cracks", "Hotspots", "Discoloration", "Delamination", "Snail Trails", "PID", "Soiling"],
-            default=["Cracks", "Hotspots", "Discoloration"],
-            help="Select which types of defects to analyze"
-        )
+        
 
 with col2:
     st.markdown('<div class="upload-section">', unsafe_allow_html=True)
