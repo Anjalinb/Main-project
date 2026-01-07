@@ -103,7 +103,7 @@ with col1:
             <div class="feature-icon">🔍</div>
             <div class="feature-title">Advanced Detection</div>
             <div class="feature-description">
-                State-of-the-art YOLOv8 model for accurate identification of solar panel defects including cracks, hotspots, and scratches.
+                State-of-the-art YOLOv8 model for accurate identification of solar panel defects including physical damage, dust and snow.
             </div>
         </div>
     """, unsafe_allow_html=True)
