@@ -2,9 +2,9 @@ import streamlit as st
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import time
-import io
+from datetime import datetime
 
-# 🔹 ADD THIS IMPORT (backend integration)
+# 🔹 Backend integration
 from backend.services.detection_service import detect
 
 st.set_page_config(
@@ -13,6 +13,7 @@ st.set_page_config(
     layout="wide"
 )
 
+# ------------------ STYLES ------------------
 st.markdown("""
     <style>
     .detection-header {
@@ -31,27 +32,18 @@ st.markdown("""
         margin: 1rem 0;
     }
     .result-card {
-    background: #f8f9fa;
-    padding: 1.5rem;
-    border-radius: 10px;
-    border-left: 4px solid #667eea;
-    margin: 1rem 0;
-    color: #212529;   /* ✅ FIX */
-}
-
-.result-card ul {
-    color: #212529;
-}
-
-.result-card li {
-    margin-bottom: 0.5rem;
-}
-.result-card h4 {
-    color: #1f2937;   /* dark slate / visible */
-    font-weight: 700;
-    margin-bottom: 0.75rem;
-}
-
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 10px;
+        border-left: 4px solid #667eea;
+        margin: 1rem 0;
+        color: #212529;
+    }
+    .result-card h4 {
+        color: #1f2937;
+        font-weight: 700;
+        margin-bottom: 0.75rem;
+    }
     .defect-badge {
         display: inline-block;
         padding: 0.5rem 1rem;
@@ -81,6 +73,11 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
+# ------------------ SESSION STATE INIT ------------------
+if "detection_history" not in st.session_state:
+    st.session_state.detection_history = []
+
+# ------------------ INPUT TYPE ------------------
 upload_type = st.radio(
     "Select Input Type:",
     ["Image", "Video"],
@@ -90,54 +87,47 @@ upload_type = st.radio(
 
 col1, col2 = st.columns([1, 1])
 
+# ================== LEFT COLUMN ==================
 with col1:
     st.markdown('<div class="upload-section">', unsafe_allow_html=True)
     st.subheader("Upload Media")
 
     if upload_type == "Image":
-        uploaded_file = st.file_uploader(
-            "Choose an image...",
+        uploaded_files = st.file_uploader(
+            "Choose image(s)...",
             type=["jpg", "jpeg", "png", "bmp"],
-            help="Upload solar panel images for defect detection"
+            accept_multiple_files=True
         )
 
-        if uploaded_file is not None:
-            image = Image.open(uploaded_file).convert("RGB")
-            st.image(image, caption="Uploaded Image")
+        images = []
+        if uploaded_files:
+            st.markdown("### Uploaded Images")
+            for idx, file in enumerate(uploaded_files):
+                img = Image.open(file).convert("RGB")
+                images.append(img)
+                st.image(img, caption=f"Image {idx + 1}")
 
-            analyze_button = st.button("🔬 Analyze Image", type="primary", use_container_width=True)
-    else:
-        uploaded_file = st.file_uploader(
-            "Choose a video...",
-            type=["mp4", "avi", "mov", "mkv"],
-            help="Upload solar panel videos for defect detection"
-        )
-
-        if uploaded_file is not None:
-            st.video(uploaded_file)
-            analyze_button = st.button("🔬 Analyze Video", type="primary", use_container_width=True)
+            analyze_button = st.button("🔬 Analyze Images", type="primary", use_container_width=True)
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-    if uploaded_file is not None:
+    if upload_type == "Image" and uploaded_files:
         st.markdown("### ⚙️ Detection Settings")
         confidence_threshold = st.slider(
             "Confidence Threshold",
             min_value=0.0,
             max_value=1.0,
             value=0.5,
-            step=0.05,
-            help="Minimum confidence level for defect detection"
+            step=0.05
         )
 
-        
-
+# ================== RIGHT COLUMN ==================
 with col2:
     st.markdown('<div class="upload-section">', unsafe_allow_html=True)
-    st.subheader(" Detection Results")
+    st.subheader("Detection Results")
 
-    if uploaded_file is not None and 'analyze_button' in locals() and analyze_button:
-        with st.spinner(" Processing... Analyzing defects..."):
+    if upload_type == "Image" and uploaded_files and 'analyze_button' in locals() and analyze_button:
+        with st.spinner("Processing... Analyzing defects..."):
             progress_bar = st.progress(0)
             for i in range(100):
                 time.sleep(0.01)
@@ -145,10 +135,11 @@ with col2:
 
             st.success("✅ Analysis Complete!")
 
-            if upload_type == "Image":
-                # 🔹 PIL → NumPy (YOLO expects NumPy)
-                np_image = np.array(image)
-                np_image = np_image[:, :, ::-1]  # RGB → BGR
+            for img_idx, image in enumerate(images):
+                st.markdown(f"## Results for Image {img_idx + 1}")
+
+                # PIL → NumPy → BGR
+                np_image = np.array(image)[:, :, ::-1]
 
                 results = detect(np_image)
 
@@ -170,7 +161,6 @@ with col2:
 
                         cls_id = int(box.cls[0])
                         label = results[0].names[cls_id]
-
                         x1, y1, x2, y2 = map(int, box.xyxy[0])
 
                         if conf >= 0.8:
@@ -180,23 +170,28 @@ with col2:
                         else:
                             severity = "Low"
 
-                        color = colors[severity]
-
-                        draw.rectangle((x1, y1, x2, y2), outline=color, width=3)
-                        draw.text((x1, y1 - 20), f"{label} ({conf:.2f})", fill=color)
+                        draw.rectangle((x1, y1, x2, y2), outline=colors[severity], width=3)
+                        draw.text((x1, y1 - 20), f"{label} ({conf:.2f})", fill=colors[severity])
 
                         detections.append({
                             "type": label,
                             "confidence": conf,
-                            "bbox": (x1, y1, x2, y2),
-                            "severity": severity
+                            "severity": severity,
+                            "bbox": (x1, y1, x2, y2)
                         })
 
-                st.image(annotated_image, caption="Annotated Results")
+                        # 🔹 STORE RESULT FOR DASHBOARD
+                        st.session_state.detection_history.append({
+                            "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            "Defect Type": label,
+                            "Severity": severity,
+                            "Confidence": conf,
+                            "Image": f"Image {img_idx + 1}"
+                        })
 
+                st.image(annotated_image, caption=f"Annotated Results – Image {img_idx + 1}")
 
-                st.markdown("###  Detected Defects")
-
+                st.markdown("### Detected Defects")
                 for det in detections:
                     severity_class = f"{det['severity'].lower()}-severity"
                     st.markdown(f"""
@@ -208,60 +203,20 @@ with col2:
                         </div>
                     """, unsafe_allow_html=True)
 
-                st.markdown("###  Summary Statistics")
-                col_a, col_b, col_c = st.columns(3)
-                with col_a:
-                    st.metric("Total Defects", len(detections))
-                with col_b:
-                    avg_conf = np.mean([d['confidence'] for d in detections]) if detections else 0
-                    st.metric("Avg Confidence", f"{avg_conf:.1%}")
-                with col_c:
-                    st.metric("High Severity", sum(1 for d in detections if d['severity'] == 'High'))
-
-            else:
-                st.info(" Video analysis results will be displayed here")
-                st.markdown("""
-                    <div class="result-card">
-                        <h4>Video Analysis Summary</h4>
-                        <p><strong>Total Frames:</strong> 450</p>
-                        <p><strong>Frames with Defects:</strong> 78 (17.3%)</p>
-                        <p><strong>Processing Time:</strong> 45.2 seconds</p>
-                    </div>
-                """, unsafe_allow_html=True)
-
-                col_a, col_b, col_c = st.columns(3)
-                with col_a:
-                    st.metric("Defects Found", 23)
-                with col_b:
-                    st.metric("Avg Confidence", "82%")
-                with col_c:
-                    st.metric("Critical Issues", 5)
-
     else:
-        st.info("👆 Upload an image or video and click 'Analyze' to begin detection")
-        st.markdown("""
-            <div class="result-card">
-                <h4>💡 Tips for Best Results:</h4>
-                <ul>
-                    <li>Use high-resolution images (minimum 1024x1024)</li>
-                    <li>Ensure good lighting conditions</li>
-                    <li>Capture panels from a perpendicular angle</li>
-                    <li>Avoid shadows and reflections</li>
-                    <li>For videos, maintain stable camera movement</li>
-                </ul>
-            </div>
-        """, unsafe_allow_html=True)
+        st.info("👆 Upload image(s) and click 'Analyze' to begin detection")
 
     st.markdown('</div>', unsafe_allow_html=True)
 
+# ------------------ INFO ------------------
 st.markdown("---")
 
 with st.expander("ℹ️ About Detection Process"):
     st.markdown("""
         **Detection Pipeline:**
-        1. **Image Preprocessing**: Input normalization and augmentation
-        2. **YOLOv8 Inference**: Real-time object detection
-        3. **Post-processing**: Non-maximum suppression and filtering
-        4. **Classification**: Defect type and severity assessment
-        5. **Visualization**: Bounding box annotation and reporting
+        1. Image preprocessing
+        2. YOLOv8 inference
+        3. Post-processing
+        4. Severity classification
+        5. Result visualization
     """)
