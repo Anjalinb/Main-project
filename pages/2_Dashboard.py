@@ -1,6 +1,5 @@
 import streamlit as st
 import plotly.graph_objects as go
-import plotly.express as px
 import pandas as pd
 import numpy as np
 
@@ -10,6 +9,7 @@ st.set_page_config(
     layout="wide"
 )
 
+# ------------------ STYLES ------------------
 st.markdown("""
     <style>
     .dashboard-header {
@@ -49,97 +49,83 @@ st.markdown("""
 
 st.markdown("""
     <div class="dashboard-header">
-        <h1> Analytics Dashboard</h1>
+        <h1>Analytics Dashboard</h1>
         <p>Real-time monitoring and defect analysis statistics</p>
     </div>
 """, unsafe_allow_html=True)
 
-np.random.seed(42)
+# ------------------ LOAD REAL DATA ------------------
+if "detection_history" in st.session_state and len(st.session_state.detection_history) > 0:
+    history_df = pd.DataFrame(st.session_state.detection_history)
+else:
+    history_df = pd.DataFrame(columns=["Timestamp", "Defect Type", "Severity", "Confidence", "Image"])
 
-defect_data = pd.DataFrame({
-    'Defect Type': ['Physical damage','Electrical damage','Snow' ,'Dust', 'Bird Droppings'],
-    'Count': [145, 98, 76, 31, 89]
-})
-
-severity_data = pd.DataFrame({
-    'Severity': ['High', 'Medium', 'Low'],
-    'Count': [123, 189, 224]
-})
-
-dates = pd.date_range(start='2024-01-01', end='2024-12-13', freq='W')
-time_series_data = pd.DataFrame({
-    'Date': dates,
-    'Defects': np.random.poisson(lam=15, size=len(dates))
-})
-
+# ------------------ KEY METRICS ------------------
 st.markdown("### 📈 Key Metrics")
+
 col1, col2, col3, col4 = st.columns(4)
 
+total_defects = len(history_df)
+unique_images = history_df["Image"].nunique() if not history_df.empty else 0
+avg_conf = history_df["Confidence"].mean() if not history_df.empty else 0
+high_severity = (history_df["Severity"] == "High").sum()
+
 with col1:
-    st.markdown("""
+    st.markdown(f"""
         <div class="metric-card">
-            <div class="metric-value">536</div>
+            <div class="metric-value">{total_defects}</div>
             <div class="metric-label">Total Defects Detected</div>
         </div>
     """, unsafe_allow_html=True)
 
 with col2:
-    st.markdown("""
+    st.markdown(f"""
         <div class="metric-card">
-            <div class="metric-value">1,247</div>
-            <div class="metric-label">Panels Inspected</div>
+            <div class="metric-value">{unique_images}</div>
+            <div class="metric-label">Images Inspected</div>
         </div>
     """, unsafe_allow_html=True)
 
 with col3:
-    st.markdown("""
+    st.markdown(f"""
         <div class="metric-card">
-            <div class="metric-value">43.0%</div>
-            <div class="metric-label">Defect Rate</div>
+            <div class="metric-value">{avg_conf:.1%}</div>
+            <div class="metric-label">Avg Confidence</div>
         </div>
     """, unsafe_allow_html=True)
 
 with col4:
-    st.markdown("""
+    st.markdown(f"""
         <div class="metric-card">
-            <div class="metric-value">87.5%</div>
-            <div class="metric-label">System Efficiency</div>
+            <div class="metric-value">{high_severity}</div>
+            <div class="metric-label">High Severity Defects</div>
         </div>
     """, unsafe_allow_html=True)
 
 st.markdown("---")
 
+# ------------------ BAR + PIE (SIDE BY SIDE) ------------------
 col1, col2 = st.columns(2)
 
 with col1:
     st.markdown('<div class="chart-container">', unsafe_allow_html=True)
     st.markdown("#### 📊 Defects by Type")
 
+    defect_counts = history_df["Defect Type"].value_counts().reset_index()
+    defect_counts.columns = ["Defect Type", "Count"]
+
+
     fig_bar = go.Figure(data=[
         go.Bar(
-            x=defect_data['Defect Type'],
-            y=defect_data['Count'],
-            marker=dict(
-                color=defect_data['Count'],
-                colorscale='Viridis',
-                showscale=False
-            ),
-            text=defect_data['Count'],
-            textposition='outside',
+            x=defect_counts["Defect Type"],
+            y=defect_counts["Count"],
+            marker=dict(color=defect_counts["Count"], colorscale="Viridis"),
+            text=defect_counts["Count"],
+            textposition="outside"
         )
     ])
 
-    fig_bar.update_layout(
-        xaxis_title="Defect Type",
-        yaxis_title="Count",
-        height=400,
-        margin=dict(l=20, r=20, t=40, b=20),
-        plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)',
-        font=dict(size=12),
-        xaxis=dict(tickangle=-45)
-    )
-
+    fig_bar.update_layout(height=400)
     st.plotly_chart(fig_bar, use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -147,187 +133,47 @@ with col2:
     st.markdown('<div class="chart-container">', unsafe_allow_html=True)
     st.markdown("#### 🎯 Severity Distribution")
 
-    colors = ['#e74c3c', '#f39c12', '#27ae60']
+    severity_counts = history_df["Severity"].value_counts()
 
     fig_pie = go.Figure(data=[
         go.Pie(
-            labels=severity_data['Severity'],
-            values=severity_data['Count'],
-            hole=0.4,
-            marker=dict(colors=colors),
-            textinfo='label+percent',
-            textfont=dict(size=14)
+            labels=severity_counts.index,
+            values=severity_counts.values,
+            hole=0.4
         )
     ])
 
-    fig_pie.update_layout(
-        height=400,
-        margin=dict(l=20, r=20, t=40, b=20),
-        paper_bgcolor='rgba(0,0,0,0)',
-        showlegend=True,
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=-0.2,
-            xanchor="center",
-            x=0.5
-        )
-    )
-
+    fig_pie.update_layout(height=400)
     st.plotly_chart(fig_pie, use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-st.markdown("#### 📅 Defect Detection Trend Over Time")
+# ------------------ RECENT HISTORY TABLE ------------------
+st.markdown("---")
+st.markdown("### 📋 Recent Detection History")
 
-fig_line = go.Figure()
-
-fig_line.add_trace(go.Scatter(
-    x=time_series_data['Date'],
-    y=time_series_data['Defects'],
-    mode='lines+markers',
-    name='Defects',
-    line=dict(color='#667eea', width=3),
-    marker=dict(size=6),
-    fill='tozeroy',
-    fillcolor='rgba(102, 126, 234, 0.1)'
-))
-
-fig_line.update_layout(
-    xaxis_title="Date",
-    yaxis_title="Number of Defects",
-    height=350,
-    margin=dict(l=20, r=20, t=20, b=20),
-    plot_bgcolor='rgba(0,0,0,0)',
-    paper_bgcolor='rgba(0,0,0,0)',
-    hovermode='x unified',
-    xaxis=dict(showgrid=True, gridcolor='rgba(0,0,0,0.1)'),
-    yaxis=dict(showgrid=True, gridcolor='rgba(0,0,0,0.1)')
-)
-
-st.plotly_chart(fig_line, use_container_width=True)
-st.markdown('</div>', unsafe_allow_html=True)
+if not history_df.empty:
+    display_df = history_df.copy()
+    display_df["Confidence"] = display_df["Confidence"].apply(lambda x: f"{x:.1%}")
+    st.dataframe(display_df, use_container_width=True)
+else:
+    st.info("No detections yet. Run detection to populate dashboard.")
 
 st.markdown("---")
 
-st.markdown("### 🔍 Detailed Analysis")
-
+# ------------------ ACTION BUTTONS ------------------
 col1, col2 = st.columns(2)
 
 with col1:
-    st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-    st.markdown("#### 📍 Top 5 Critical Defects")
-
-    critical_defects = defect_data.nlargest(5, 'Count')
-
-    fig_h_bar = go.Figure(data=[
-        go.Bar(
-            y=critical_defects['Defect Type'],
-            x=critical_defects['Count'],
-            orientation='h',
-            marker=dict(
-                color=['#e74c3c', '#e67e22', '#f39c12', '#f1c40f', '#27ae60'],
-            ),
-            text=critical_defects['Count'],
-            textposition='outside',
-        )
-    ])
-
-    fig_h_bar.update_layout(
-        xaxis_title="Count",
-        yaxis_title="",
-        height=300,
-        margin=dict(l=20, r=20, t=20, b=20),
-        plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)',
-    )
-
-    st.plotly_chart(fig_h_bar, use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-with col2:
-    st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-    st.markdown("#### ⚡ Detection Performance")
-
-    performance_data = pd.DataFrame({
-        'Metric': ['Precision', 'Recall', 'F1-Score', 'Accuracy'],
-        'Score': [0.94, 0.91, 0.92, 0.95]
-    })
-
-    fig_performance = go.Figure(data=[
-        go.Bar(
-            x=performance_data['Metric'],
-            y=performance_data['Score'],
-            marker=dict(
-                color=['#3498db', '#9b59b6', '#1abc9c', '#e74c3c'],
-            ),
-            text=[f"{x:.1%}" for x in performance_data['Score']],
-            textposition='outside',
-        )
-    ])
-
-    fig_performance.update_layout(
-        yaxis_title="Score",
-        yaxis=dict(range=[0, 1]),
-        height=300,
-        margin=dict(l=20, r=20, t=20, b=20),
-        plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)',
-    )
-
-    st.plotly_chart(fig_performance, use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-st.markdown("---")
-
-st.markdown("### 📋 Recent Detection History")
-
-history_data = pd.DataFrame({
-    'Timestamp': pd.date_range(end=pd.Timestamp.now(), periods=10, freq='H')[::-1],
-    'Panel ID': [f'PANEL-{np.random.randint(1000, 9999)}' for _ in range(10)],
-    'Defect Type': np.random.choice(['Physical damage', 'Dust', 'Snow', 'Bird Droppings'], 10),
-    'Severity': np.random.choice(['High', 'Medium', 'Low'], 10),
-    'Confidence': np.random.uniform(0.70, 0.99, 10)
-})
-
-history_data['Timestamp'] = history_data['Timestamp'].dt.strftime('%Y-%m-%d %H:%M')
-history_data['Confidence'] = history_data['Confidence'].apply(lambda x: f"{x:.1%}")
-
-def highlight_severity(row):
-    if row['Severity'] == 'High':
-        return ['background-color: #fee'] * len(row)
-    elif row['Severity'] == 'Medium':
-        return ['background-color: #ffeaa7'] * len(row)
-    else:
-        return ['background-color: #d4edda'] * len(row)
-
-st.dataframe(
-    history_data,
-    use_container_width=True,
-    hide_index=True,
-    column_config={
-        "Timestamp": st.column_config.TextColumn("Timestamp", width="medium"),
-        "Panel ID": st.column_config.TextColumn("Panel ID", width="small"),
-        "Defect Type": st.column_config.TextColumn("Defect Type", width="medium"),
-        "Severity": st.column_config.TextColumn("Severity", width="small"),
-        "Confidence": st.column_config.TextColumn("Confidence", width="small"),
-    }
-)
-
-st.markdown("---")
-
-col1, col2, col3 = st.columns(3)
-with col1:
-    if st.button("🔄 Refresh Data", use_container_width=True):
+    if st.button("🔄 Clear Dashboard Data", use_container_width=True):
+        st.session_state.detection_history = []
         st.rerun()
+
 with col2:
-    st.download_button(
-        label="📥 Export Report",
-        data=history_data.to_csv(index=False),
-        file_name="defect_report.csv",
-        mime="text/csv",
-        use_container_width=True
-    )
-with col3:
-    if st.button("📊 Generate Analysis", use_container_width=True):
-        st.success("Detailed analysis report generated!")
+    if not history_df.empty:
+        st.download_button(
+            label="📥 Export Report",
+            data=history_df.to_csv(index=False),
+            file_name="defect_report.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
