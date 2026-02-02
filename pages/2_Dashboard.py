@@ -1,7 +1,7 @@
 import streamlit as st
 import plotly.graph_objects as go
 import pandas as pd
-import numpy as np
+from datetime import datetime
 
 st.set_page_config(
     page_title="Dashboard - Solar Panel Defect Detection",
@@ -12,38 +12,11 @@ st.set_page_config(
 # ------------------ STYLES ------------------
 st.markdown("""
     <style>
-    .dashboard-header {
-        text-align: center;
-        padding: 2rem 0;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 15px;
-        margin-bottom: 2rem;
-        color: white;
-    }
-    .metric-card {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        text-align: center;
-    }
-    .metric-value {
-        font-size: 2.5rem;
-        font-weight: 700;
-        color: #667eea;
-    }
-    .metric-label {
-        color: #666;
-        font-size: 1rem;
-        margin-top: 0.5rem;
-    }
-    .chart-container {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        margin: 1rem 0;
-    }
+    .dashboard-header { text-align: center; padding: 2rem 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px; margin-bottom: 2rem; color: white; }
+    .metric-card { background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
+    .metric-value { font-size: 2.5rem; font-weight: 700; color: #667eea; }
+    .metric-label { color: #666; font-size: 1rem; margin-top: 0.5rem; }
+    .chart-container { background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 1rem 0; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -54,15 +27,15 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# ------------------ LOAD REAL DATA ------------------
+# ------------------ LOAD DATA ------------------
 if "detection_history" in st.session_state and len(st.session_state.detection_history) > 0:
     history_df = pd.DataFrame(st.session_state.detection_history)
+    history_df["Timestamp"] = pd.to_datetime(history_df["Timestamp"])
 else:
     history_df = pd.DataFrame(columns=["Timestamp", "Defect Type", "Severity", "Confidence", "Image"])
 
 # ------------------ KEY METRICS ------------------
 st.markdown("### 📈 Key Metrics")
-
 col1, col2, col3, col4 = st.columns(4)
 
 total_defects = len(history_df)
@@ -110,10 +83,8 @@ col1, col2 = st.columns(2)
 with col1:
     st.markdown('<div class="chart-container">', unsafe_allow_html=True)
     st.markdown("#### 📊 Defects by Type")
-
     defect_counts = history_df["Defect Type"].value_counts().reset_index()
     defect_counts.columns = ["Defect Type", "Count"]
-
 
     fig_bar = go.Figure(data=[
         go.Bar(
@@ -124,7 +95,6 @@ with col1:
             textposition="outside"
         )
     ])
-
     fig_bar.update_layout(height=400)
     st.plotly_chart(fig_bar, use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
@@ -132,7 +102,6 @@ with col1:
 with col2:
     st.markdown('<div class="chart-container">', unsafe_allow_html=True)
     st.markdown("#### 🎯 Severity Distribution")
-
     severity_counts = history_df["Severity"].value_counts()
 
     fig_pie = go.Figure(data=[
@@ -142,15 +111,27 @@ with col2:
             hole=0.4
         )
     ])
-
     fig_pie.update_layout(height=400)
     st.plotly_chart(fig_pie, use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
+# ------------------ DEFECTS OVER TIME ------------------
+st.markdown("### 📅 Defects Over Time")
+if not history_df.empty:
+    time_df = history_df.groupby(history_df["Timestamp"].dt.date).size().reset_index(name="Count")
+    fig_time = go.Figure()
+    fig_time.add_trace(go.Scatter(
+        x=time_df["Timestamp"], y=time_df["Count"], mode="lines+markers",
+        line=dict(color="#667eea"), marker=dict(size=8)
+    ))
+    fig_time.update_layout(height=400, xaxis_title="Date", yaxis_title="Defects Detected")
+    st.plotly_chart(fig_time, use_container_width=True)
+else:
+    st.info("No detection data available.")
+
 # ------------------ RECENT HISTORY TABLE ------------------
 st.markdown("---")
 st.markdown("### 📋 Recent Detection History")
-
 if not history_df.empty:
     display_df = history_df.copy()
     display_df["Confidence"] = display_df["Confidence"].apply(lambda x: f"{x:.1%}")
@@ -158,11 +139,8 @@ if not history_df.empty:
 else:
     st.info("No detections yet. Run detection to populate dashboard.")
 
-st.markdown("---")
-
 # ------------------ ACTION BUTTONS ------------------
 col1, col2 = st.columns(2)
-
 with col1:
     if st.button("🔄 Clear Dashboard Data", use_container_width=True):
         st.session_state.detection_history = []
