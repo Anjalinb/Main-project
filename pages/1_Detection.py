@@ -111,15 +111,8 @@ with col1:
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-    if upload_type == "Image" and uploaded_files:
-        st.markdown("### ⚙️ Detection Settings")
-        confidence_threshold = st.slider(
-            "Confidence Threshold",
-            min_value=0.0,
-            max_value=1.0,
-            value=0.5,
-            step=0.05
-        )
+    confidence_threshold = 0.5
+
 
 # ================== RIGHT COLUMN ==================
 with col2:
