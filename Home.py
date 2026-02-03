@@ -39,7 +39,7 @@ st.markdown("""
 
 .hero-title {
     font-family: 'Playfair Display', serif;
-    font-size: 4rem;
+    font-size: 3.7rem;
     font-weight: 800;
     color: white;
     margin-bottom: 1rem;
@@ -305,7 +305,7 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-st.markdown('<div style="padding: 3rem 2rem 0;"><div class="section-title">Core Features</div></div>', unsafe_allow_html=True)
+st.markdown('<div style="padding: 3rem 2rem 0;"></div>', unsafe_allow_html=True)
 
 col1, col2, col3 = st.columns(3, gap="medium")
 
@@ -407,7 +407,7 @@ col1, col2 = st.columns(2, gap="medium")
 with col1:
     st.markdown("""
         <div class="benefit-item">
-            <div class="benefit-title">🎯 Precision Engineering</div>
+            <div class="benefit-title"> Precision Engineering</div>
             <div class="benefit-text">
                 Our deep learning model is trained on thousands of diverse solar panel images, ensuring robust performance across various environmental conditions and panel types.
             </div>
@@ -416,7 +416,7 @@ with col1:
 
     st.markdown("""
         <div class="benefit-item">
-            <div class="benefit-title">💰 Cost Optimization</div>
+            <div class="benefit-title"> Cost Optimization</div>
             <div class="benefit-text">
                 Identify and prioritize maintenance interventions based on defect severity, reducing operational costs and maximizing return on investment for your solar infrastructure.
             </div>
@@ -426,7 +426,7 @@ with col1:
 with col2:
     st.markdown("""
         <div class="benefit-item">
-            <div class="benefit-title">🔄 Scalable Solution</div>
+            <div class="benefit-title"> Scalable Solution</div>
             <div class="benefit-text">
                 Process small individual panels or large utility-scale solar farms. Our system scales effortlessly to match your operation's size and complexity.
             </div>
@@ -435,7 +435,7 @@ with col2:
 
     st.markdown("""
         <div class="benefit-item">
-            <div class="benefit-title">📈 Data-Driven Insights</div>
+            <div class="benefit-title"> Data-Driven Insights</div>
             <div class="benefit-text">
                 Access detailed historical trends and predictive analytics to anticipate potential failures before they impact your energy production and efficiency metrics.
             </div>
