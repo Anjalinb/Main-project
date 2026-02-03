@@ -2,12 +2,15 @@ import streamlit as st
 import plotly.graph_objects as go
 import pandas as pd
 from datetime import datetime
+import os
 
 st.set_page_config(
     page_title="Dashboard - Solar Panel Defect Detection",
     page_icon="📊",
     layout="wide"
 )
+
+CSV_FILE = "defect_history.csv"
 
 # ------------------ STYLES ------------------
 st.markdown("""
@@ -27,15 +30,29 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# ------------------ LOAD DATA ------------------
-if "detection_history" in st.session_state and len(st.session_state.detection_history) > 0:
-    history_df = pd.DataFrame(st.session_state.detection_history)
+# ------------------ LOAD + PERSIST DATA ------------------
+# 1️⃣ Load existing CSV (persistent data)
+if os.path.exists(CSV_FILE):
+    history_df = pd.read_csv(CSV_FILE)
     history_df["Timestamp"] = pd.to_datetime(history_df["Timestamp"])
 else:
-    history_df = pd.DataFrame(columns=["Timestamp", "Defect Type", "Severity", "Confidence", "Image"])
+    history_df = pd.DataFrame(
+        columns=["Timestamp", "Defect Type", "Severity", "Confidence", "Image"]
+    )
+
+# 2️⃣ Append current session detections (if any)
+if "detection_history" in st.session_state and len(st.session_state.detection_history) > 0:
+    session_df = pd.DataFrame(st.session_state.detection_history)
+    session_df["Timestamp"] = pd.to_datetime(session_df["Timestamp"], errors="coerce")
+
+    history_df = pd.concat([history_df, session_df], ignore_index=True)
+    history_df.drop_duplicates(inplace=True)
+
+    # Save back to CSV
+    history_df.to_csv(CSV_FILE, index=False)
 
 # ------------------ KEY METRICS ------------------
-st.markdown("### 📈 Key Metrics")
+st.markdown("###  Key Metrics")
 col1, col2, col3, col4 = st.columns(4)
 
 total_defects = len(history_df)
@@ -43,50 +60,31 @@ unique_images = history_df["Image"].nunique() if not history_df.empty else 0
 avg_conf = history_df["Confidence"].mean() if not history_df.empty else 0
 high_severity = (history_df["Severity"] == "High").sum()
 
-with col1:
-    st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-value">{total_defects}</div>
-            <div class="metric-label">Total Defects Detected</div>
-        </div>
-    """, unsafe_allow_html=True)
-
-with col2:
-    st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-value">{unique_images}</div>
-            <div class="metric-label">Images Inspected</div>
-        </div>
-    """, unsafe_allow_html=True)
-
-with col3:
-    st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-value">{avg_conf:.1%}</div>
-            <div class="metric-label">Avg Confidence</div>
-        </div>
-    """, unsafe_allow_html=True)
-
-with col4:
-    st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-value">{high_severity}</div>
-            <div class="metric-label">High Severity Defects</div>
-        </div>
-    """, unsafe_allow_html=True)
+for col, value, label in zip(
+    [col1, col2, col3, col4],
+    [total_defects, unique_images, f"{avg_conf:.1%}", high_severity],
+    ["Total Defects Detected", "Images Inspected", "Avg Confidence", "High Severity Defects"]
+):
+    with col:
+        st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{value}</div>
+                <div class="metric-label">{label}</div>
+            </div>
+        """, unsafe_allow_html=True)
 
 st.markdown("---")
 
-# ------------------ BAR + PIE (SIDE BY SIDE) ------------------
+# ------------------ BAR + PIE ------------------
 col1, col2 = st.columns(2)
 
 with col1:
     st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-    st.markdown("#### 📊 Defects by Type")
+    st.markdown("####  Defects by Type")
     defect_counts = history_df["Defect Type"].value_counts().reset_index()
     defect_counts.columns = ["Defect Type", "Count"]
 
-    fig_bar = go.Figure(data=[
+    fig_bar = go.Figure([
         go.Bar(
             x=defect_counts["Defect Type"],
             y=defect_counts["Count"],
@@ -101,55 +99,87 @@ with col1:
 
 with col2:
     st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-    st.markdown("#### 🎯 Severity Distribution")
+    st.markdown("####  Severity Distribution")
     severity_counts = history_df["Severity"].value_counts()
 
-    fig_pie = go.Figure(data=[
-        go.Pie(
-            labels=severity_counts.index,
-            values=severity_counts.values,
-            hole=0.4
-        )
+    fig_pie = go.Figure([
+        go.Pie(labels=severity_counts.index, values=severity_counts.values, hole=0.4)
     ])
     fig_pie.update_layout(height=400)
     st.plotly_chart(fig_pie, use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
+# ------------------ DEFECTS OVER TIME (FIXED) ------------------
 # ------------------ DEFECTS OVER TIME ------------------
-st.markdown("### 📅 Defects Over Time")
+st.markdown("###  Defects Over Time")
+
 if not history_df.empty:
-    time_df = history_df.groupby(history_df["Timestamp"].dt.date).size().reset_index(name="Count")
+    # ✅ Group detections by DATE (not full timestamp)
+    time_df = (
+        history_df
+        .copy()
+    )
+    time_df["Date"] = pd.to_datetime(time_df["Timestamp"]).dt.date
+
+    time_df = (
+        time_df
+        .groupby("Date")
+        .size()
+        .reset_index(name="Count")
+        .sort_values("Date")
+    )
+
     fig_time = go.Figure()
-    fig_time.add_trace(go.Scatter(
-        x=time_df["Timestamp"], y=time_df["Count"], mode="lines+markers",
-        line=dict(color="#667eea"), marker=dict(size=8)
-    ))
-    fig_time.update_layout(height=400, xaxis_title="Date", yaxis_title="Defects Detected")
+
+    fig_time.add_trace(
+        go.Scatter(
+            x=time_df["Date"],
+            y=time_df["Count"],
+            mode="lines+markers",
+            line=dict(width=3),
+            marker=dict(size=9)
+        )
+    )
+
+    fig_time.update_layout(
+        height=400,
+        xaxis_title="Date",
+        yaxis_title="Defects Detected",
+        yaxis=dict(dtick=1),
+        xaxis=dict(type="category"),
+        showlegend=False
+    )
+
     st.plotly_chart(fig_time, use_container_width=True)
 else:
     st.info("No detection data available.")
 
+
 # ------------------ RECENT HISTORY TABLE ------------------
 st.markdown("---")
-st.markdown("### 📋 Recent Detection History")
+st.markdown("###  Recent Detection History")
+
 if not history_df.empty:
     display_df = history_df.copy()
     display_df["Confidence"] = display_df["Confidence"].apply(lambda x: f"{x:.1%}")
     st.dataframe(display_df, use_container_width=True)
 else:
-    st.info("No detections yet. Run detection to populate dashboard.")
+    st.info("No detections yet.")
 
 # ------------------ ACTION BUTTONS ------------------
 col1, col2 = st.columns(2)
+
 with col1:
-    if st.button("🔄 Clear Dashboard Data", use_container_width=True):
+    if st.button(" Clear Dashboard Data", use_container_width=True):
+        if os.path.exists(CSV_FILE):
+            os.remove(CSV_FILE)
         st.session_state.detection_history = []
         st.rerun()
 
 with col2:
     if not history_df.empty:
         st.download_button(
-            label="📥 Export Report",
+            label=" Export Report",
             data=history_df.to_csv(index=False),
             file_name="defect_report.csv",
             mime="text/csv",
