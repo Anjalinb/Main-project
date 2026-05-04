@@ -299,7 +299,7 @@ st.markdown("""
 st.markdown("""
     <div class="hero-section">
         <div class="hero-content">
-            <div class="hero-title">SolarSight</div>
+            <div class="hero-title">Solar Sentinels</div>
             <div class="hero-subtitle">Intelligent PV Module Defect Detection System</div>
         </div>
     </div>
@@ -312,7 +312,7 @@ col1, col2, col3 = st.columns(3, gap="medium")
 with col1:
     st.markdown("""
         <div class="feature-card">
-            <div class="feature-icon">🔍</div>
+            <div class="feature-icon"></div>
             <div class="feature-title">Advanced Detection</div>
             <div class="feature-description">
                 Powered by state-of-the-art YOLOv8 deep learning model for precise identification of solar panel defects including physical damage, dust accumulation, and snow coverage.
@@ -323,7 +323,7 @@ with col1:
 with col2:
     st.markdown("""
         <div class="feature-card">
-            <div class="feature-icon">📊</div>
+            <div class="feature-icon"></div>
             <div class="feature-title">Real-time Analytics</div>
             <div class="feature-description">
                 Comprehensive dashboard with detailed analytics, intelligent severity classification, and interactive performance metrics visualization for actionable insights.
@@ -334,7 +334,7 @@ with col2:
 with col3:
     st.markdown("""
         <div class="feature-card">
-            <div class="feature-icon">⚡</div>
+            <div class="feature-icon"></div>
             <div class="feature-title">Fast Processing</div>
             <div class="feature-description">
                 Lightning-fast image and video analysis with instant results. Upload your files and receive detailed defect annotations and recommendations in seconds.
@@ -397,7 +397,7 @@ st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
 st.markdown("""
     <div style="padding: 0 2rem;">
-        <div class="section-title">Why Choose SolarSight</div>
+        <div class="section-title">Why Choose SolarSentinels</div>
         <div class="section-subtitle">Engineered for Excellence</div>
     </div>
 """, unsafe_allow_html=True)
@@ -460,7 +460,7 @@ st.markdown("""
 
 st.markdown("""
     <div class="footer">
-        <p><strong>SolarSight</strong> — Powered by YOLOv8 Deep Learning Technology</p>
+        <p><strong>SolarSentinels</strong> — Powered by YOLOv8 Deep Learning Technology</p>
         <p style="margin-top: 0.5rem; font-size: 0.85rem; opacity: 0.8;">Advanced Computer Vision for Solar Energy Optimization</p>
     </div>
 """, unsafe_allow_html=True)
